@@ -2,8 +2,11 @@ const Twitter = require('twitter');
 require('dotenv/config')
 const https = require("https");
 const CronJob=require('cron').CronJob;
+const querystring = require("querystring")
 
-const fiksu_ai = require('./rating_exported');
+const unicode = require("./unicode")
+
+const fiksu_ai = require('./rating');
 
 
 
@@ -18,6 +21,54 @@ var client = new Twitter({
   access_token_key: accessToken,
   access_token_secret: accessTokenSecret
 });
+
+function postInfoDiscord(message) {
+    var url = "https://discord.com/api/webhooks/1034590470287929444/ceWSrNB52x_v8vTH-YI9cSXhUfnvK6qDb7YrSEPxg0ZnjsnS7P7cBRoV-wF3gZRgDgzz"
+    var postData = encodeURIComponent(JSON.stringify({
+        content: message,
+        username: "Saarni Safkat",
+        tts: false,
+
+    }));
+
+    const options = {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': postData.length,
+        },
+        timeout: 1000, // in ms
+    };
+
+    return new Promise((resolve, reject) => {
+        const req = https.request(url, options, (res) => {
+        if (res.statusCode < 200 || res.statusCode > 299) {
+            console.log(res)
+            return reject(new Error(`HTTP status code ${res.statusCode}`));
+        };
+
+        const body = [];
+        res.on('data', (chunk) => body.push(chunk));
+        res.on('end', () => {
+            const resString = Buffer.concat(body).toString();
+            resolve(resString);
+        });
+        });
+
+        req.on('error', (err) => {
+        reject(err);
+        });
+
+        req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request time out'));
+        });
+
+        req.write(postData);
+        req.end();
+  });
+};
+
 
 
 function postFoodList() {
@@ -45,12 +96,18 @@ function postFoodList() {
                     }
                 }
                 let foodtweet = `Tänään lounaaksi on ${syötävä_ruoka.split(",")[0]}.
-    Super fiksu A.I sanoo ruokaa ${rating}
-    
-    Kasvis lounaaksi on tänään ${kasvis_lounas.split(",")[0]}. 
-    Super fiksu A.I sanoo ruokaa ${rating}
+Super fiksu A.I sanoo ruokaa ${rating}
+
+Kasvis lounaaksi on tänään ${kasvis_lounas.split(",")[0]}. 
+Super fiksu A.I sanoo ruokaa ${rating}
     `
-                var params = { status: foodtweet };
+                let discord_msg = `Tanaan lounaaksi on ${syötävä_ruoka.split(",")[0]}.
+Super fiksu A.I sanoo ruokaa ${rating}
+
+Kasvis lounaaksi on tanaan ${kasvis_lounas.split(",")[0]}. 
+Super fiksu A.I sanoo ruokaa ${rating}
+                    `
+                /*var params = { status: foodtweet };
                 client.post('statuses/update', params, function(error, tweet, response) {
                     if (error) throw error;
                     console.log(tweet);
@@ -60,10 +117,12 @@ function postFoodList() {
                     var params2 = { id: tweetid};
                     client.post(`account/pin_tweet`, params2, function(error, pinned, response) {
                         if (error) throw error;
-                        console.log(response)
+                        console.log(pinned)
                     });
                 }
-                );
+                );*/
+                console.log(foodtweet)
+                postInfoDiscord(foodtweet)
                 
             } catch (error) {
                 console.error(error.message);
@@ -74,7 +133,10 @@ function postFoodList() {
     .on("error", (error) => {
         console.log(error);
     });
+
+    
 }
+postInfoDiscord(`Bot has started again!`)
 const postFoodListEveryday = new CronJob({
 
     cronTime: '00 00 00 * * * ',
