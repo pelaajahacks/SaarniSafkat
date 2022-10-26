@@ -2,9 +2,7 @@ const Twitter = require('twitter');
 require('dotenv/config')
 const https = require("https");
 const CronJob=require('cron').CronJob;
-const querystring = require("querystring")
 
-const unicode = require("./unicode")
 
 const fiksu_ai = require('./rating');
 
