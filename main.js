@@ -107,7 +107,7 @@ Super fiksu A.I sanoo ruokaa ${rating}
 Kasvis lounaaksi on tanaan ${kasvis_lounas.split(",")[0]}. 
 Super fiksu A.I sanoo ruokaa ${rating}
                     `
-                /*var params = { status: foodtweet };
+                var params = { status: foodtweet };
                 client.post('statuses/update', params, function(error, tweet, response) {
                     if (error) throw error;
                     console.log(tweet);
@@ -120,9 +120,9 @@ Super fiksu A.I sanoo ruokaa ${rating}
                         console.log(pinned)
                     });
                 }
-                );*/
+                );
                 console.log(foodtweet)
-                postInfoDiscord(foodtweet)
+                postInfoDiscord(discord_msg)
                 
             } catch (error) {
                 console.error(error.message);
