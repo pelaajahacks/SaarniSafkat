@@ -1,24 +1,31 @@
 const Twitter = require('twitter');
 require('dotenv/config')
 const https = require("https");
-const CronJob=require('cron').CronJob;
-const stringify_safely = require("safe-json-stringify")
+const CronJob = require('cron').CronJob;
 const querystring = require("querystring")
-const detectCharacterEncoding = require('detect-character-encoding');
 
 const fiksu_ai = require('./rating');
 
+const express = require('express');
+const app = express();
+const port = 3000;
+
+app.get('/', (req, res) => res.send('Hello World!'));
+
+app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));
 
 const apikey = process.env.apikey
 const apiSecretKey = process.env.apikeysecret
 const accessToken = process.env.accesstoken
 const accessTokenSecret = process.env.accesstokensecret
- 
+
+
+
 var client = new Twitter({
-  consumer_key: apikey,
-  consumer_secret: apiSecretKey,
-  access_token_key: accessToken,
-  access_token_secret: accessTokenSecret
+    consumer_key: apikey,
+    consumer_secret: apiSecretKey,
+    access_token_key: accessToken,
+    access_token_secret: accessTokenSecret
 });
 
 function postInfoDiscord(message) {
@@ -29,13 +36,13 @@ function postInfoDiscord(message) {
         tts: false,
 
     })));
-    
+
 
     const options = {
         method: 'POST',
         headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': postData.length,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': postData.length,
 
         },
         timeout: 69000, // in ms
@@ -43,32 +50,32 @@ function postInfoDiscord(message) {
 
     return new Promise((resolve, reject) => {
         const req = https.request(url, options, (res) => {
-        if (res.statusCode < 200 || res.statusCode > 299) {
+            if (res.statusCode < 200 || res.statusCode > 299) {
 
-            return reject(new Error(`HTTP status code ${res.statusCode}`));
-        };
+                return "Failed!"
+            };
 
-        const body = [];
-        res.on('data', (chunk) => body.push(chunk));
-        res.on('end', () => {
-            const resString = Buffer.concat(body).toString();
+            const body = [];
+            res.on('data', (chunk) => body.push(chunk));
+            res.on('end', () => {
+                const resString = Buffer.concat(body).toString();
 
-            resolve(resString);
-        });
+                resolve(resString);
+            });
         });
 
         req.on('error', (err) => {
-        reject(err);
+            console.log(err)
         });
 
         req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('Request time out'));
+            req.destroy();
+            console.log(err)
         });
         console.log(postData)
         req.write(postData);
         req.end();
-  });
+    });
 };
 
 
@@ -83,19 +90,19 @@ function postFoodList() {
             try {
                 let foodlist = JSON.parse(data).result.pageContext.menu.Days;
                 // do something with JSON
-                
+
                 var d = new Date();
                 var utcDate = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
-                
+
                 console.dir(foodlist)
                 const dayOfWeekDigit = utcDate.getDay()
                 console.log(dayOfWeekDigit)
-                
-                
-                for(const food of foodlist[dayOfWeekDigit].Meals) {
-                    
-                        
-                    if(JSON.stringify(food.MealType).includes("KASVIS")) {
+
+
+                for (const food of foodlist[dayOfWeekDigit].Meals) {
+
+
+                    if (JSON.stringify(food.MealType).includes("KASVIS")) {
                         var kasvis_lounas = food.Name
                         var rating = fiksu_ai.get_rating(food.Name)
                     }
@@ -111,38 +118,36 @@ Kasvis lounaaksi on tänään ${kasvis_lounas.split(",")[0]}.
 Super fiksu A.I sanoo ruokaa ${rating}`
                 var params = { status: foodtweet };
                 client.post('statuses/update', params, function(error, tweet, response) {
-                    if (error) throw error;
                     console.log(tweet);
                     console.log(response.body);
                     var tweetid = tweet.id_str
                     console.log(tweetid);
-                    var params2 = { id: tweetid};
+                    var params2 = { id: tweetid };
                     client.post(`account/pin_tweet`, params2, function(error, pinned, response) {
-                        if (error) throw error;
                         console.log(pinned)
                     });
                 }
                 );
                 console.log(foodtweet)
                 postInfoDiscord(foodtweet)
-                
+
             } catch (error) {
-                console.error(error.message);
+                console.log(error.message);
             };
         });
-    
-    })
-    .on("error", (error) => {
-        console.log(error);
-    });
 
-    
+    })
+        .on("error", (error) => {
+            console.log(error);
+        });
+
+
 }
 postInfoDiscord(`Bot has started again!`)
 const postFoodListEveryday = new CronJob({
 
     cronTime: '01 00 * * *',
-    onTick: function () {
+    onTick: function() {
         console.log("Posting foodlist!!!")
         postFoodList()
     },
